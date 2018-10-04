@@ -1,9 +1,19 @@
 #!/bin/bash
 
-# installr.sh
+# installo.sh
 # A script to (optionally) erase a volume and install macos and
 # additional packagesfound in a packages folder in the same directory
 # as this script
+#
+# Modified from munki's installr tool and Rich Trouton's First_Boot_Package_Install_Generator tool. All
+# glory to those fine projects.
+#
+# Installr combines the above, rather than install/running pkgs/scripts from the recovery environment,
+# we place the mechanism from First_Boot_Package to the new disk and drops your payload of items off 
+# for it, eliminating the headaches of trying to install things from the gimped Recovery environment. 
+# Other Changes include baking an OS install app (of your choosing) into the DMG so we can upgrade as 
+# part of the (optional) nuke and pave step.
+
 
 if [[ $EUID != 0 ]] ; then
     echo "installr: Please run this as root, or via sudo."
