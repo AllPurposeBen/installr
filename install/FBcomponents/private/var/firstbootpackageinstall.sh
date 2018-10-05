@@ -182,7 +182,7 @@ if [[ -d "$install_dir" ]]; then
  
   # read all installer names into an array
 
-  install=($(/usr/bin/find -s "$install_dir" -maxdepth 2 \( -iname \*\.pkg -o -iname \*\.mpkg \)))
+  install=($(/usr/bin/find -s "$install_dir" -maxdepth 2 \( -iname \*\.pkg -o -iname \*\.mpkg -o -iname \*\.sh -o -iname \*\.mobileconfig \)))
  
   # restore IFS to previous state
 
@@ -203,20 +203,58 @@ if [[ -d "$install_dir" ]]; then
   for (( i=0; i<${tLen}; i++ ));
   do
      /bin/echo "`date +%Y-%m-%d\ %H:%M:%S`  Installing "${install[$i]}" on this Mac." >> $log_location
-     /usr/sbin/installer -dumplog -verbose -pkg "${install[$i]}" -target /
+     # Detect what it is and install/run correctly
+     case "${install[$i]}" in
+     	*.pkg|*.mpkg )
+     		# pkg
+			/usr/sbin/installer -dumplog -verbose -pkg "${install[$i]}" -target /
+			if [ $? != "0" ]
+			then
+				INSTALLRESULT="FAILURE: "${install[$i]}" did not install correctly."
+			else
+				INSTALLRESULT="SUCCESS: "${install[$i]}" has been successfully installed."
+			fi
+	 
+			 /bin/echo "`date +%Y-%m-%d\ %H:%M:%S`  $INSTALLRESULT" >> $log_location
+			;;
+		*.sh )
+			# script
+			bash "${install[$i]}"
+			if [ $? != "0" ]
+			then
+				INSTALLRESULT="FAILURE: "${install[$i]}" did not install correctly."
+			else
+				INSTALLRESULT="SUCCESS: "${install[$i]}" has been successfully installed."
+			fi
+	 
+			 /bin/echo "`date +%Y-%m-%d\ %H:%M:%S`  $INSTALLRESULT" >> $log_location
+			;;
+		.mobileconfig )
+			# profile
+			/usr/bin/profiles -I -F "${install[$i]}"
+			if [ $? != "0" ]
+			then
+				INSTALLRESULT="FAILURE: "${install[$i]}" did not install correctly."
+			else
+				INSTALLRESULT="SUCCESS: "${install[$i]}" has been successfully installed."
+			fi
+	 
+			 /bin/echo "`date +%Y-%m-%d\ %H:%M:%S`  $INSTALLRESULT" >> $log_location
+			;;
+		* )
+			# anything else, bail on it
+			INSTALLRESULT="WARNING: "${install[$i]}" is not a an installable item."
+			 /bin/echo "`date +%Y-%m-%d\ %H:%M:%S`  $INSTALLRESULT" >> $log_location
+			continue
+			;;
+		esac
+			
 
 	# Check for installation success. If an installation did not return
 	# an exit status of 0, add a note to the log that the installation
 	# had problems and should be checked.
      
-	if [ $? != "0" ]
-	then
-        INSTALLRESULT="FAILURE: "${install[$i]}" did not install correctly."
-    else
-        INSTALLRESULT="SUCCESS: "${install[$i]}" has been successfully installed."
-	fi
-     
-     /bin/echo "`date +%Y-%m-%d\ %H:%M:%S`  $INSTALLRESULT" >> $log_location
+
   done
 
   # Remove the installers
